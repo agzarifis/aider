@@ -8,6 +8,8 @@ from aider import models, prompts, utils
 from aider.sendchat import simple_send_with_retries
 
 from .dump import dump  # noqa: F401
+import logging
+import subprocess
 
 
 class GitRepo:
@@ -88,6 +90,23 @@ class GitRepo:
             cmd += ["--"] + fnames
         else:
             cmd += ["-a"]
+
+        # Log the current working directory
+        current_working_dir = os.getcwd()
+        logging.info(f"Current working directory: {current_working_dir}")
+
+        # Log the top-level directory of the current Git repository
+        git_top_level_dir = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], cwd=self.root).decode().strip()
+        logging.info(f"Top-level Git directory: {git_top_level_dir}")
+
+        # Log the git identity being used
+        user_name = subprocess.check_output(['git', 'config', 'user.name'], cwd=self.root).decode().strip()
+        user_email = subprocess.check_output(['git', 'config', 'user.email'], cwd=self.root).decode().strip()
+
+        if user_name and user_email:
+           logging.info(f"Using local git identity: {user_name} <{user_email}>")
+        else:
+            logging.info("Using global git identity")
 
         self.repo.git.commit(cmd)
         commit_hash = self.repo.head.commit.hexsha[:7]
