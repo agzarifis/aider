@@ -96,17 +96,28 @@ class GitRepo:
         logging.info(f"Current working directory: {current_working_dir}")
 
         # Log the top-level directory of the current Git repository
-        git_top_level_dir = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], cwd=self.root).decode().strip()
+        git_top_level_dir = subprocess.check_output(
+            ['git', 'rev-parse', '--show-toplevel'], cwd=self.root).decode().strip()
         logging.info(f"Top-level Git directory: {git_top_level_dir}")
 
-        # Log the git identity being used
-        user_name = subprocess.check_output(['git', 'config', 'user.name'], cwd=self.root).decode().strip()
-        user_email = subprocess.check_output(['git', 'config', 'user.email'], cwd=self.root).decode().strip()
+        try:
+            user_name = subprocess.check_output(
+                ['git', 'config', 'user.name'], cwd=self.root).decode().strip()
+        except subprocess.CalledProcessError:
+            user_name = None
+            logging.info("No local git user.name set, using global git identity")
 
-        if user_name and user_email:
-           logging.info(f"Using local git identity: {user_name} <{user_email}>")
-        else:
-            logging.info("Using global git identity")
+        try:
+            user_email = subprocess.check_output(
+                ['git', 'config', 'user.email'], cwd=self.root).decode().strip()
+            logging.info(f"Using local git identity: {user_name} <{user_email}>")
+        except subprocess.CalledProcessError:
+            user_email = None
+            logging.info("No local git user.email set, using global git identity")
+
+        # If both user name and email are not set, log an appropriate message
+        if not user_name and not user_email:
+            logging.warning("No git user.name and user.email set, commits may fail")
 
         self.repo.git.commit(cmd)
         commit_hash = self.repo.head.commit.hexsha[:7]
